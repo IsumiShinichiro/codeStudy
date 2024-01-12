@@ -481,3 +481,60 @@ print(f"Inserted {row_count} rows")
 异常处理:
 
 network error
+
+要在另一个Python文件中使用你已经封装好的数据库操作类，你需要进行适当的模块导入。这里，我将假设你的封装的类存放在一个名为`database.py`的文件中，而你希望在另一个名为`main.py`的文件中使用这个类。
+
+### 步骤 1: 组织你的文件
+
+确保你的文件组织如下：
+
+```
+your_project_folder/
+|-- database.py    # 包含你封装的MySQLDatabase类
+|-- main.py        # 你的主业务逻辑文件
+```
+
+### 步骤 2: 在`database.py`中定义你的类
+
+在`database.py`中，你的`MySQLDatabase`类看起来可能是这样的：
+
+```python
+# database.py
+
+class MySQLDatabase:
+    # ... 你的数据库类的实现 ...
+
+    def query(self, sql, params=None):
+        # ... 方法实现 ...
+
+    def execute(self, sql, params=None):
+        # ... 方法实现 ...
+```
+
+### 步骤 3: 从`main.py`中导入和使用这个类
+
+在`main.py`文件中，你可以导入`MySQLDatabase`类，并使用它来执行数据库操作。
+
+```python
+# main.py
+
+from database import MySQLDatabase
+
+# 创建数据库实例
+db = MySQLDatabase(host='localhost', user='your_user', password='your_password', db='your_db')
+
+# 使用数据库实例进行操作
+results = db.query("SELECT * FROM some_table")
+for row in results:
+    print(row)
+
+# 其他业务逻辑...
+```
+
+### 注意事项
+
+- 确保两个文件位于同一目录中，这样才能正确地使用相对导入。
+- 在`main.py`中使用`from database import MySQLDatabase`语句来导入你的类。这里，`database`是文件名（不带`.py`扩展名），而`MySQLDatabase`是你在`database.py`中定义的类名。
+- 接下来，你可以像在`database.py`中那样使用`MySQLDatabase`类的实例来执行数据库操作。
+
+这种方法可以使你的代码组织得更清晰，且易于维护，特别是在更大的项目中。
