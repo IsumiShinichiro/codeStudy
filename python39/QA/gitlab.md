@@ -1633,3 +1633,99 @@ async def example_endpoint():
 - 对于更复杂的日志配置，你可能需要使用 `logging.config.dictConfig` 来代替 `logging.basicConfig`。这将允许你定义更复杂的日志处理器、格式化器和过滤器。
 
 使用此方法，你可以在整个 FastAPI 应用中保持日志配置的一致性和可维护性。
+
+Person: 
+- 这个log配置把之前main哪个带时间等级文件名和行数的配置弄进去重新给个demo
+
+ChatGPT: 
+- 当然，让我们把之前在 `main.py` 中定义的详细日志配置整合到单独的 `logger_config.py` 文件中，并在整个应用中使用这个配置。这里是如何做的示例：
+### 第一步: 创建 Logger 配置文件
+
+创建一个 `logger_config.py` 文件，其中包含详细的日志配置。
+
+```python
+# logger_config.py
+import logging
+import logging.config
+
+def setup_logger():
+    LOGGING_CONFIG = {
+        'version': 1,
+        'formatters': {
+            'detailed': {
+                'class': 'logging.Formatter',
+                'format': '%(asctime)s %(levelname)s [%(filename)s:%(lineno)d] %(message)s',
+                'datefmt': '%Y-%m-%d %H:%M:%S'
+            },
+        },
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+                'formatter': 'detailed',
+            },
+        },
+        'root': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+    }
+
+    logging.config.dictConfig(LOGGING_CONFIG)
+    logger = logging.getLogger("myapp")
+    return logger
+
+logger = setup_logger()
+```
+
+
+
+这个配置定义了一个日志格式，其中包含时间戳、日志级别、文件名和行号。
+### 第二步: 在主应用和控制器中使用 Logger
+
+在 `main.py` 和 `controller.py` 中，使用从 `logger_config.py` 导入的 `logger`。
+
+```python
+# main.py
+from fastapi import FastAPI
+from controller import router as controller_router
+from logger_config import logger
+
+app = FastAPI()
+
+app.include_router(controller_router)
+
+@app.get("/")
+async def read_root():
+    logger.info("Accessed the root endpoint")
+    return {"Hello": "World"}
+```
+
+
+
+在 `controller.py` 中：
+
+```python
+# controller.py
+from fastapi import APIRouter
+from logger_config import logger
+
+router = APIRouter(
+    prefix="/api/v1",
+    tags=["example"]
+)
+
+@router.get("/example")
+async def example_endpoint():
+    logger.info("Accessed the /api/v1/example endpoint")
+    return {"message": "This is an example endpoint under /api/v1"}
+```
+
+
+### 第三步: 运行和测试
+
+运行你的 FastAPI 应用，并观察日志输出，以确保它包含所有必要的详细信息。
+### 注意事项 
+- 确保所有需要记录日志的文件都正确地从 `logger_config.py` 导入 `logger`。
+- 如果你的应用规模较大或配置较为复杂，可以考虑进一步细化日志配置，例如添加文件日志处理器、设置不同的日志级别等。
+
+通过这种方式，你的日志配置将集中管理，能够确保应用的所有部分都使用一致的日志记录方式，这对于调试和维护是非常有帮助的。
