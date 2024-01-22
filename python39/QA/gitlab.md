@@ -1331,3 +1331,44 @@ if __name__ == "__main__":
     import uvicorn
     port = config.get('port', 8000)  # 从配置文件中读取端口号
 ```
+
+Person: 
+- 从配置文件读取好像没啥用，启动刷新后还是8000
+
+ChatGPT: 
+- 确实，如果你希望在启动 FastAPI 应用时就根据配置文件中的端口号来启动服务器，需要稍微改变代码的结构。由于 FastAPI 的 `uvicorn.run()` 方法是在程序的最末端调用的，这时候配置文件可能还没有被加载，所以初始端口号的读取需要在 `uvicorn.run()` 调用之前完成。
+
+这里有两种方法来处理这个问题：
+### 方法 1: 预先加载配置
+
+在调用 `uvicorn.run()` 之前手动加载配置，然后使用这些配置来启动 FastAPI。
+
+```python
+if __name__ == "__main__":
+    import uvicorn
+    initial_config = load_local_config()  # 预先加载配置
+    port = initial_config.get('port', 8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
+```
+
+
+
+这种方法的缺点是它只能在应用启动时加载一次配置，后续的自动刷新或手动刷新不会影响到已经启动的 FastAPI 服务器的端口号。
+### 方法 2: 使用环境变量或外部启动脚本
+
+另一种方法是使用环境变量或外部脚本来指定 FastAPI 应用的启动参数，包括端口号。这种方法更加灵活，因为它允许在应用外部控制这些参数。
+
+例如，你可以在启动应用之前从 `app.yml` 中读取端口号，并设置环境变量，然后使用这个环境变量来启动 FastAPI：
+
+```bash
+# Bash 脚本示例
+PORT=$(python -c 'import yaml; print(yaml.safe_load(open("resource/app.yml"))["port"])')
+uvicorn main:app --host 0.0.0.0 --port $PORT
+```
+
+
+
+这种方法允许在不重启 FastAPI 服务的情况下动态刷新其他配置，但端口号的改变仍然需要重启服务。
+### 注意 
+- 如果选择预先加载配置的方法，请确保配置文件的路径和内容是正确的，并且 `load_local_config()` 函数在调用 `uvicorn.run()` 之前被执行。
+- 使用环境变量或外部脚本的方法提供了更多的灵活性，但也增加了部署的复杂性。
