@@ -1372,3 +1372,109 @@ uvicorn main:app --host 0.0.0.0 --port $PORT
 ### 注意 
 - 如果选择预先加载配置的方法，请确保配置文件的路径和内容是正确的，并且 `load_local_config()` 函数在调用 `uvicorn.run()` 之前被执行。
 - 使用环境变量或外部脚本的方法提供了更多的灵活性，但也增加了部署的复杂性。
+
+Person: 
+- 我用pycharm启动时不论怎么改都是8000
+
+ChatGPT: 
+- 如果你在使用 PyCharm 并且在 IDE 中直接运行 FastAPI 应用，可能会遇到端口号始终为默认值（8000）的情况。这是因为在 IDE 的运行配置中设置的端口号优先级可能高于代码中的设置。要解决这个问题，有几种方法可以尝试：
+### 方法 1: 修改 PyCharm 运行配置
+1. 打开你的 FastAPI 项目。
+2. 在 PyCharm 的右上角，找到运行配置下拉菜单，点击编辑配置。
+3. 在运行/调试配置对话框中，找到你的 FastAPI 应用配置。 
+4. 修改“参数”字段，添加或修改 `--port` 参数。例如，如果你的配置文件中端口号是 5000，则添加 `--port 5000`。
+5. 应用更改并关闭对话框。
+6. 重新运行你的 FastAPI 应用。
+### 方法 2: 在代码中动态设置端口
+
+如果你想让代码更加灵活，不依赖于 IDE 的配置，可以在代码中动态设置端口号。你可以在 `if __name__ == "__main__"` 块中添加逻辑来读取配置文件，并据此设置端口号。
+
+```python
+if __name__ == "__main__":
+    import uvicorn
+    # 确保在调用 uvicorn.run 之前先加载配置
+    config = load_local_config()
+    port = config.get('port', 8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
+```
+
+
+### 方法 3: 使用环境变量
+
+另一种方法是通过环境变量来设置端口号。你可以在 PyCharm 的运行配置中设置环境变量，然后在代码中读取这个变量来确定端口号。
+
+在 PyCharm 的运行配置中设置环境变量 `APP_PORT`，然后在代码中读取它：
+
+```python
+import os
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv('APP_PORT', 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
+```
+
+
+### 注意
+- 在进行这些更改时，确保你的应用不是已经在运行。如果是，你需要先停止应用，然后再重新启动。
+- 如果你的应用依赖于其他配置文件或环境变量，请确保它们在应用启动之前已经被正确设置。
+
+Person: 
+- 现在我想另外写个controller文件，里面写各种接口，怎么写能被加载进去
+
+ChatGPT: 
+- 要在 FastAPI 中创建一个单独的控制器（controller）文件来管理不同的接口，你可以遵循模块化的方法。这样，你可以在一个独立的文件中定义路由（endpoints），然后在主应用中导入并包含这些路由。下面是一个如何实现这一点的步骤指南：
+### 步骤 1: 创建 Controller 文件
+
+创建一个新的 Python 文件，比如 `controller.py`。在这个文件中，你可以定义你的路由。
+
+```python
+# controller.py
+from fastapi import APIRouter
+
+router = APIRouter()
+
+@router.get("/example")
+async def example_endpoint():
+    return {"message": "This is an example endpoint"}
+```
+
+
+
+在这个例子中，我们创建了一个 `APIRouter` 实例，并定义了一个示例路由。
+### 步骤 2: 在主应用中包含 Controller
+
+在你的主应用文件（通常是 `main.py`）中，导入刚才创建的控制器模块，并使用 `.include_router()` 方法将其包含到主应用中。
+
+```python
+# main.py
+from fastapi import FastAPI
+from controller import router as controller_router
+
+app = FastAPI()
+
+# 包含控制器路由
+app.include_router(controller_router)
+```
+
+
+
+这样，所有在 `controller.py` 中定义的路由都将包含在主应用中。
+### 步骤 3: 运行和测试
+
+运行你的 FastAPI 应用并测试新定义的路由是否有效。
+
+```bash
+uvicorn main:app --reload
+```
+
+
+
+访问 `http://localhost:8000/example`，你应该能看到 `{"message": "This is an example endpoint"}` 的响应。
+### 其他注意事项
+- 确保路由的路径不会与主应用中的其他路由冲突。 
+- 使用 `APIRouter` 允许你在不同的文件中组织不同的路由，这对于保持大型应用的代码清晰和可管理非常有用。 
+- 你可以在 `APIRouter` 中定义额外的参数，如标签、前缀等，以进一步组织和分组你的路由。
+- 通过这种方式，你可以轻松地将应用分解为多个模块，使其更易于维护和扩展。
+
+这种模块化的方法非常适合大型项目，因为它可以帮助你保持代码的组织性和清晰度。
