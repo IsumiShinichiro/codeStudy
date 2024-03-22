@@ -1,0 +1,104 @@
+好的,我再次检查并整合一下完整的正确写法。下面是修正后的示例:
+
+1. MySQL存储过程:
+```sql
+DELIMITER //
+
+CREATE PROCEDURE get_case_details(
+    IN p_version_list VARCHAR(1000),
+    IN p_feature_list VARCHAR(1000),
+    IN p_project_id INT,
+    OUT p_case_details_list VARCHAR(4000)
+)
+BEGIN
+    SET p_case_details_list = '';
+    
+    SELECT GROUP_CONCAT(
+        CONCAT_WS('|', c.id, c.title, c.creator, c.create_time, c.last_modifier, c.last_modify_time) 
+        SEPARATOR ','
+    ) INTO p_case_details_list
+    FROM test_case c
+    JOIN test_case_version cv ON c.id = cv.case_id
+    JOIN test_case_feature cf ON c.id = cf.case_id
+    WHERE c.project_id = p_project_id
+      AND FIND_IN_SET(cv.version, p_version_list) > 0 
+      AND FIND_IN_SET(cf.feature, p_feature_list) > 0
+    GROUP BY c.id;
+END //
+
+DELIMITER ;
+```
+
+2. MyBatis映射文件:
+```xml
+<mapper namespace="com.example.dao.TestCaseDao">
+    <resultMap id="caseDetailMap" type="com.example.dto.CaseDetail">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="creator" column="creator"/>
+        <result property="createTime" column="create_time"/>
+        <result property="lastModifier" column="last_modifier"/>
+        <result property="lastModifyTime" column="last_modify_time"/>
+    </resultMap>
+
+    <select id="getCaseDetails" statementType="CALLABLE" parameterType="map" resultMap="caseDetailsResultMap">
+        {CALL get_case_details(
+            #{versionList, mode=IN, jdbcType=VARCHAR},
+            #{featureList, mode=IN, jdbcType=VARCHAR},
+            #{projectId, mode=IN, jdbcType=INTEGER},
+            #{caseDetailsList, mode=OUT, jdbcType=VARCHAR, javaType=string, resultMap=caseDetailMap}
+        )}
+    </select>
+    
+    <resultMap id="caseDetailsResultMap" type="map">
+        <result property="caseDetailsList" column="p_case_details_list" jdbcType="VARCHAR" javaType="string" typeHandler="com.example.handler.CaseDetailListTypeHandler"/>
+    </resultMap>
+</mapper>
+```
+
+3. 自定义TypeHandler:
+```java
+public class CaseDetailListTypeHandler extends BaseTypeHandler<List<CaseDetail>> {
+    @Override
+    public void setNonNullParameter(PreparedStatement ps, int i, List<CaseDetail> parameter, JdbcType jdbcType) throws SQLException {
+        // 设置参数的实现
+    }
+
+    @Override
+    public List<CaseDetail> getNullableResult(ResultSet rs, String columnName) throws SQLException {
+        String caseDetailsString = rs.getString(columnName);
+        return parse(caseDetailsString);
+    }
+
+    @Override
+    public List<CaseDetail> getNullableResult(ResultSet rs, int columnIndex) throws SQLException {
+        String caseDetailsString = rs.getString(columnIndex);
+        return parse(caseDetailsString);
+    }
+
+    @Override
+    public List<CaseDetail> getNullableResult(CallableStatement cs, int columnIndex) throws SQLException {
+        String caseDetailsString = cs.getString(columnIndex);
+        return parse(caseDetailsString);
+    }
+
+    private List<CaseDetail> parse(String caseDetailsString) {
+        // 解析字符串为CaseDetail对象列表的实现
+    }
+}
+```
+
+4. Java代码:
+```java
+Map<String, Object> params = new HashMap<>();
+params.put("versionList", versionList);
+params.put("featureList", featureList);
+params.put("projectId", projectId);
+
+Map<String, Object> result = testCaseDao.getCaseDetails(params);
+List<CaseDetail> caseDetails = (List<CaseDetail>) result.get("caseDetailsList");
+```
+
+这样修改后,整个流程应该是正确的:
+- 存储过程接收输入参数并返回输出参数,将用例详情拼接成字符串。
+- My
